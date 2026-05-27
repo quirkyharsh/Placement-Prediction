@@ -54,18 +54,24 @@ class ModelTrainer:
 
         try:
 
-            logging.info("Splitting training and test input data")
-
-            X_train, y_train, X_test, y_test = (
-
-                train_array[:, :-1],
-
-                train_array[:, -1],
-
-                test_array[:, :-1],
-
-                test_array[:, -1]
+            logging.info(
+                "Splitting training and testing input data"
             )
+
+            # ---------------- TRAIN TEST SPLIT ----------------
+
+            X_train = train_array[:, :-1]
+
+            y_train = train_array[:, -1]
+
+            X_test = test_array[:, :-1]
+
+            y_test = test_array[:, -1]
+
+            logging.info("Data split completed")
+
+
+            # ---------------- MODELS ----------------
 
             models = {
 
@@ -73,25 +79,39 @@ class ModelTrainer:
 
                 "KNeighbors Classifier": KNeighborsClassifier(),
 
-                "Decision Tree": DecisionTreeClassifier(),
+                "Decision Tree": DecisionTreeClassifier(
+                    random_state=42
+                ),
 
-                "Random Forest": RandomForestClassifier(),
+                "Random Forest": RandomForestClassifier(
+                    random_state=42
+                ),
 
-                "Gradient Boosting": GradientBoostingClassifier(),
+                "Gradient Boosting": GradientBoostingClassifier(
+                    random_state=42
+                ),
 
-                "AdaBoost Classifier": AdaBoostClassifier(),
+                "AdaBoost Classifier": AdaBoostClassifier(
+                    random_state=42
+                ),
 
-                "SVC": SVC(),
+                "SVC": SVC(
+                    probability=True
+                ),
 
                 "XGBoost Classifier": XGBClassifier(
-                    use_label_encoder=False,
-                    eval_metric='logloss'
+                    eval_metric='logloss',
+                    random_state=42
                 ),
 
                 "CatBoost Classifier": CatBoostClassifier(
-                    verbose=False
+                    verbose=False,
+                    random_state=42
                 )
             }
+
+
+            # ---------------- HYPERPARAMETERS ----------------
 
             params = {
 
@@ -99,7 +119,7 @@ class ModelTrainer:
 
                 "KNeighbors Classifier": {
 
-                    'n_neighbors': [3,5,7,9]
+                    'n_neighbors': [3, 5, 7, 9]
                 },
 
                 "Decision Tree": {
@@ -122,8 +142,8 @@ class ModelTrainer:
                 "Gradient Boosting": {
 
                     'learning_rate': [
-                        .1,
-                        .01
+                        0.1,
+                        0.01
                     ],
 
                     'n_estimators': [
@@ -135,8 +155,8 @@ class ModelTrainer:
                 "AdaBoost Classifier": {
 
                     'learning_rate': [
-                        .1,
-                        .01
+                        0.1,
+                        0.01
                     ],
 
                     'n_estimators': [
@@ -147,7 +167,10 @@ class ModelTrainer:
 
                 "SVC": {
 
-                    'C': [1,10],
+                    'C': [
+                        1,
+                        10
+                    ],
 
                     'kernel': [
                         'linear',
@@ -158,8 +181,8 @@ class ModelTrainer:
                 "XGBoost Classifier": {
 
                     'learning_rate': [
-                        .1,
-                        .01
+                        0.1,
+                        0.01
                     ],
 
                     'n_estimators': [
@@ -187,6 +210,9 @@ class ModelTrainer:
                 }
             }
 
+
+            # ---------------- MODEL EVALUATION ----------------
+
             model_report = evaluate_models(
 
                 X_train=X_train,
@@ -201,6 +227,13 @@ class ModelTrainer:
 
                 param=params
             )
+
+            logging.info(
+                f"Model Report : {model_report}"
+            )
+
+
+            # ---------------- BEST MODEL ----------------
 
             best_model_score = max(
                 sorted(model_report.values())
@@ -217,18 +250,32 @@ class ModelTrainer:
             best_model = models[best_model_name]
 
             logging.info(
-                f"Best Model Found: {best_model_name}"
+                f"Best Model Found : {best_model_name}"
             )
 
-            # Train best model again
+            logging.info(
+                f"Best Model Accuracy : {best_model_score}"
+            )
 
-            best_model.fit(X_train, y_train)
+
+            # ---------------- VALIDATION ----------------
 
             if best_model_score < 0.6:
 
                 raise CustomException(
                     "No best model found"
                 )
+
+
+            # ---------------- TRAIN BEST MODEL ----------------
+
+            best_model.fit(
+                X_train,
+                y_train
+            )
+
+
+            # ---------------- SAVE MODEL ----------------
 
             save_object(
 
@@ -237,14 +284,28 @@ class ModelTrainer:
                 obj=best_model
             )
 
-            predicted = best_model.predict(X_test)
+            logging.info(
+                "Best model saved successfully"
+            )
+
+
+            # ---------------- PREDICTION ----------------
+
+            predicted = best_model.predict(
+                X_test
+            )
 
             accuracy = accuracy_score(
                 y_test,
                 predicted
             )
 
+            logging.info(
+                f"Final Accuracy Score : {accuracy}"
+            )
+
             return accuracy
+
 
         except Exception as e:
 
